@@ -100,8 +100,8 @@ def main():
         print("截图失败")
         return
 
-    # resp = detect_text(open_image_and_to_base64(img_file))
-    resp = mock_detect_text("debug1.json")
+    resp = detect_text(open_image_and_to_base64(img_file))
+    # resp = mock_detect_text("debug1.json")
     if resp is None:
         print("OCR failed")
         return
