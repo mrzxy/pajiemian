@@ -2,6 +2,7 @@
 import re
 
 import time
+from datetime import datetime
 from database import DB
 from dc import Discord
 from helper import image_to_base64, open_image_and_to_base64, deep_get, filter_nearest_less_equal, get_dpi_scale, \
@@ -76,13 +77,15 @@ def match_result(resp):
 
         message_id = f"{role}|{event}|{content}".replace(" ", "", -1)
 
-        print(f"{role} 发送:{content}")
         if not db.is_sent(message_id):
-            if discord.send_msg_by_webhook(role, content):
-                db.insert_send_history(message_id)
+            print(f"{role} 发送:{content}")
+            db.insert_send_history(message_id)
+            # if discord.send_msg_by_webhook(role, content):
+            #     db.insert_send_history(message_id)
 
 
 def main():
+    print(datetime.now().strftime("%H:%M:%S") + "-开始截屏")
     # scale = NSScreen.mainScreen().backingScaleFactor()
     scale = 1
     scale_factor = get_dpi_scale()
@@ -90,17 +93,15 @@ def main():
         int(0 * scale_factor),  # left
         int(172 * scale_factor),  # top
         int(1075 * scale * scale_factor),  # width
-        int(846 * scale * scale_factor)  # height
+        int(674 * scale * scale_factor)  # height
     )
     img_file = capture_and_crop(region=scaled_region)
     if img_file is None:
         print("截图失败")
         return
 
-    return
-
-    # resp = detect_text(open_image_and_to_base64(img_file))
-    resp = mock_detect_text("simplty.json")
+    resp = detect_text(open_image_and_to_base64(img_file))
+    # resp = mock_detect_text("simplty.json")
     if resp is None:
         print("OCR failed")
         return
