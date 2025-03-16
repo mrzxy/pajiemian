@@ -15,7 +15,7 @@ from ocr_client import detect_text, mock_detect_text
 def match_result(resp):
     pattern = re.compile(
         r"(D\s?P|Rickman|Kira)\s?"  # 匹配角色名（兼容空格）
-        r"(\d{1,2}/\d{1,2}/\d{2,4},\s?\d{1,2}:\d{2}\s?[AP]M)\s"  # 匹配事件时间
+        r"(\d{1,2}/\d{1,2}/\d{2,4},\s?\d{1,2}:\d{2}\s?[AP]M)\s?"  # 匹配事件时间
         r"(.*)"  # 匹配内容
     )
 
@@ -100,8 +100,8 @@ def main():
         print("截图失败")
         return
 
-    resp = detect_text(open_image_and_to_base64(img_file))
-    # resp = mock_detect_text("simplty.json")
+    # resp = detect_text(open_image_and_to_base64(img_file))
+    resp = mock_detect_text("debug1.json")
     if resp is None:
         print("OCR failed")
         return
@@ -111,7 +111,7 @@ def main():
 if __name__ == "__main__":
     db = DB()
     discord = Discord()
-    interval = 1
+    interval = 5
     # resp = detect_text(open_image_and_to_base64(img_file))
     # with open(os.path.join("case", "large_text.json"), "w") as f:
     #     f.write(resp.to_json_string())
