@@ -1,58 +1,14 @@
-import json
-import time
-import mss
-from PIL import Image
-import os
-import ctypes
-import sys
-from AppKit import NSScreen
+
 import re
-from datetime import datetime
+
+import time
 from database import DB
 from dc import Discord
-from helper import image_to_base64, open_image_and_to_base64, deep_get, filter_nearest_less_equal
+from helper import image_to_base64, open_image_and_to_base64, deep_get, filter_nearest_less_equal, get_dpi_scale, \
+    capture_and_crop, corp_image
 
 from ocr_client import detect_text, mock_detect_text
 
-from glom import glom
-
-
-def get_dpi_scale():
-    if sys.platform == "win32":
-        user32 = ctypes.windll.user32
-        user32.SetProcessDPIAware()  # 让 Python 进程感知 DPI
-        dpi = user32.GetDpiForSystem()
-        return dpi / 96.0  # 标准 DPI 为 96
-    else:
-        return 1.0
-
-
-def capture_and_crop(region=None, save_path="screenshots"):
-    """
-    定期截图并裁剪。
-    :param region: 截取区域 (left, top, width, height)，默认全屏
-    :param interval: 截图间隔（秒）
-    :param count: 截图次数
-    :param save_path: 图片保存路径
-    """
-    os.makedirs(save_path, exist_ok=True)
-
-    with mss.mss() as sct:
-        monitor = sct.monitors[1] if region is None else {"left": region[0], "top": region[1], "width": region[2],
-                                                          "height": region[3]}
-
-        screenshot = sct.grab(monitor)
-        img = Image.frombytes("RGB", screenshot.size, screenshot.rgb)
-
-        if region:
-            img = img.crop((0, 0, region[2], region[3]))  # 裁剪
-
-        now = datetime.now()
-        filename = os.path.join(save_path, "screenshot_{}.png".format(now.strftime("%Y%m%d_%H%M%S")))
-        img.save(filename)
-        print(f"Saved: {filename}")
-        return filename
-    return None
 
 
 def match_result(resp):
@@ -127,15 +83,15 @@ def match_result(resp):
 
 
 def main():
-    scale = NSScreen.mainScreen().backingScaleFactor()
+    # scale = NSScreen.mainScreen().backingScaleFactor()
+    scale = 1
     scale_factor = get_dpi_scale()
     scaled_region = (
-        int(314 * scale_factor),  # left
-        int(158 * scale_factor),  # top
-        int(1150 * scale * scale_factor),  # width
-        int(680 * scale * scale_factor)  # height
+        int(0 * scale_factor),  # left
+        int(172 * scale_factor),  # top
+        int(1075 * scale * scale_factor),  # width
+        int(846 * scale * scale_factor)  # height
     )
-    scaled_region = None
     img_file = capture_and_crop(region=scaled_region)
     if img_file is None:
         print("截图失败")
@@ -155,20 +111,18 @@ if __name__ == "__main__":
     db = DB()
     discord = Discord()
     interval = 1
-    # img_file = "/Users/zxy/Project/xianyu/capture/screenshots/large_text.png"
     # resp = detect_text(open_image_and_to_base64(img_file))
     # with open(os.path.join("case", "large_text.json"), "w") as f:
     #     f.write(resp.to_json_string())
     # capture_and_crop(region=(100, 100, 500, 400), interval=2, count=5)
     # capture_and_crop(region=None, interval=1, count=1)
 
-# while True:
-#     try:
-#         main()
-#     except Exception as e:
-#         print(e)
-#     finally:
-#         time.sleep(interval)
-    main()
+    while True:
+        try:
+            main()
+        except Exception as e:
+            print(e)
+        finally:
+            time.sleep(interval)
 
 # capture_and_crop(region=scaled_region, interval=1, count=1)
