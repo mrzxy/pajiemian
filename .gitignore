@@ -3,4 +3,4 @@ __pycache__
 screenshots
 venv
 case
-app.log
+logs
