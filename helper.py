@@ -1,11 +1,12 @@
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import mss
 from PIL import Image
 import os
 import ctypes
 import sys
+from logger import logger
 
 
 def open_image_and_to_base64(image_path):
@@ -32,7 +33,7 @@ def filter_nearest_less_equal(data, m):
         for i in range(len(data) - 1, -1, -1):
             offset_y = data[i].get("offset_y", 0)
             if offset_y < offset:
-                print("发现一张图片，所以过滤 {}".format(data[i].get("content")))
+                logger.info("发现一张图片，所以过滤 {}".format(data[i].get("content")))
                 data.pop(i)
                 break
     return data
@@ -47,6 +48,54 @@ def get_dpi_scale():
     else:
         return 1.0
 
+def create_date_folder(base_dir):
+    """
+    创建一个按当前日期命名的文件夹。
+
+    参数:
+        base_dir (str): 基础目录，日期文件夹将创建在该目录下。
+
+    返回:
+        str: 创建的文件夹路径。
+    """
+    # 获取当前日期
+    today = datetime.now()
+    date_str = today.strftime("%Y-%m-%d")  # 格式化为 YYYY-MM-DD
+
+    # 创建日期文件夹
+    date_folder = os.path.join(base_dir, date_str)
+    os.makedirs(date_folder, exist_ok=True)
+
+    print(f"已创建文件夹: {date_folder}")
+    return date_folder
+
+def delete_old_folders(base_dir, days_to_keep=7):
+    """
+    删除超过指定天数的旧文件夹。
+
+    参数:
+        base_dir (str): 基础目录，检查该目录下的文件夹。
+        days_to_keep (int): 保留文件夹的天数。
+    """
+    # 获取当前时间
+    now = datetime.now()
+
+    # 遍历基础目录下的所有文件夹
+    for folder_name in os.listdir(base_dir):
+        folder_path = os.path.join(base_dir, folder_name)
+        if os.path.isdir(folder_path):
+            try:
+                # 解析文件夹名称中的日期
+                folder_date = datetime.strptime(folder_name, "%Y-%m-%d")
+                # 计算文件夹的年龄
+                folder_age = now - folder_date
+                # 如果文件夹超过指定天数，则删除
+                if folder_age > timedelta(days=days_to_keep):
+                    shutil.rmtree(folder_path)
+                    print(f"已删除过期文件夹: {folder_path}")
+            except ValueError:
+                # 如果文件夹名称不是日期格式，则跳过
+                continue
 
 def capture_and_crop(region=None, save_path="screenshots"):
     """
@@ -56,7 +105,8 @@ def capture_and_crop(region=None, save_path="screenshots"):
     :param count: 截图次数
     :param save_path: 图片保存路径
     """
-    os.makedirs(save_path, exist_ok=True)
+    # os.makedirs(save_path, exist_ok=True)
+    create_date_folder(save_path)
 
     with mss.mss() as sct:
         monitor = sct.monitors[1] if region is None else {"left": region[0], "top": region[1], "width": region[2],
@@ -71,7 +121,7 @@ def capture_and_crop(region=None, save_path="screenshots"):
         now = datetime.now()
         filename = os.path.join(save_path, "screenshot_{}.pdf".format(now.strftime("%Y%m%d_%H%M%S")))
         img.save(filename, "PDF", resolution=100.0)
-        print(f"Saved: {filename}")
+        logger.info(f"Saved: {filename}")
         return filename
     return None
 
@@ -82,5 +132,5 @@ def corp_image(image_path, region, save_path="screenshots"):
         now = datetime.now()
         filename = os.path.join(save_path, "corp_{}.png".format(now.strftime("%Y%m%d_%H%M%S")))
         img.save(filename)
-        print(f"Saved: {filename}")
+        logger.info(f"Saved: {filename}")
         return filename
