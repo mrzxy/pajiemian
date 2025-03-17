@@ -84,7 +84,7 @@ def match_result(resp):
 
 
 def main():
-    logger.info(datetime.now().strftime("%H:%M:%S") + "-开始截屏")
+    logger.info("开始截屏")
     # scale = NSScreen.mainScreen().backingScaleFactor()
     scale = 1
     scale_factor = get_dpi_scale()
