@@ -17,7 +17,7 @@ def main():
         int(0 * scale_factor),  # left
         int(172 * scale_factor),  # top
         int(1075 * scale * scale_factor),  # width
-        int(674 * scale * scale_factor)  # height
+        int(857 * scale * scale_factor)  # height
     )
     img_file = capture_and_crop(region=scaled_region)
     if img_file is None:
