@@ -2,6 +2,7 @@
 __pycache__
 screenshots
 venv
+env
 case
 logs
 config.json
