@@ -5,3 +5,4 @@ venv
 case
 logs
 config.json
+db.json
