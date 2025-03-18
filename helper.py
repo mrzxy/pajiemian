@@ -67,7 +67,6 @@ def create_date_folder(base_dir):
     date_folder = os.path.join(base_dir, date_str)
     os.makedirs(date_folder, exist_ok=True)
 
-    print(f"已创建文件夹: {date_folder}")
     return date_folder
 
 def delete_old_folders(base_dir, days_to_keep=7):
@@ -106,8 +105,7 @@ def capture_and_crop(region=None, save_path="screenshots"):
     :param count: 截图次数
     :param save_path: 图片保存路径
     """
-    # os.makedirs(save_path, exist_ok=True)
-    create_date_folder(save_path)
+    save_path = create_date_folder(save_path)
 
     with mss.mss() as sct:
         monitor = sct.monitors[1] if region is None else {"left": region[0], "top": region[1], "width": region[2],

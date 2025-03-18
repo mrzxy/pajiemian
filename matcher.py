@@ -5,10 +5,11 @@ from helper import open_image_and_to_base64, deep_get, filter_nearest_less_equal
 from logger import logger
 from database import db
 from dc import discord
+from trie import replace_keywords
 
 pattern = re.compile(
     r"(D\s?P|Rickman|Kira)\s?"  # 匹配角色名（兼容空格）
-    r"(\d{1,2}/\d{1,2}/\d{2,4},\s?\d{1,2}:\d{2}\s?[AP]M)\s?"  # 匹配事件时间
+    r"(\d{1,2}/\d{1,2}/\d{2,4},\s?\d{1,2}(?::\d{1,2})?:\d{2}\s?[AP]M)\s?"  # 匹配事件时间
     r"(.*)"  # 匹配内容
 )
 
@@ -16,7 +17,8 @@ pattern = re.compile(
 def to_lines(resp):
     pat = re.compile(
         r"(\w{1,25})\s?"  # 匹配角色名（兼容空格）
-        r"(\d{1,2}/\d{1,2}/\d{2,4},\s?\d{1,2}:\d{2}\s?[AP]M)\s?"  # 匹配事件时间
+        r"(\d{1,2}/\d{1,2}/\d{2,4},\s?\d{1,2}(?::\d{1,2})?:\d{2}\s?[AP]M)\s?"  # 匹配事件时间
+
     )
     chars = resp.get("data").get("chars")
     line_data = []
@@ -26,8 +28,11 @@ def to_lines(resp):
             buffer.write(char.get("char"))
 
         new_y = charLine[0].get("y")
+        new_x = charLine[0].get("x")
+        # print("x:{}, {}".format(new_x, buffer.getvalue()))
 
         append = False
+        test = False
         if len(line_data) > 0:
             last = line_data[len(line_data) - 1]
             if new_y - last["y"] > 8:
@@ -35,32 +40,36 @@ def to_lines(resp):
             else:
                 # ocr 可能 发送人 在后面
                 new_char = buffer.getvalue()
-                matches = pat.findall(new_char)
-                if len(matches) > 0:
-                    buffer.write(" ")
-                    buffer.write(last["buff"].getvalue())
-                    last["buff"] = buffer
-                else:
-                    last["buff"].write(" ")
-                    last["buff"].write(new_char)
+                last['buffer']. append({"x": new_x, "char": new_char})
         else:
             append = True
 
         if append:
             line_data.append({
                 "y": charLine[0].get("y"),
-                "buff": buffer,
+                "buffer": [
+                    {
+                        "x": new_x,
+                        "char": buffer.getvalue(),
+                    }
+                ],
             })
 
     pattern2 = re.compile(
         r"(\w{1,25})\s?"  # 匹配角色名（兼容空格）
-        r"(\d{1,2}/\d{1,2}/\d{2,4},\s?\d{1,2}:\d{2}\s?[AP]M)\s?"  # 匹配事件时间
+        r"(\d{1,2}/\d{1,2}/\d{2,4},\s?\d{1,2}(?::\d{1,2})?:\d{2}\s?[AP]M)\s?"  # 匹配事件时间
         r"(.*)"  # 匹配内容
     )
 
     collated_data = []
     for k, v in enumerate(line_data):
-        content = v.get("buff").getvalue()
+        sorted_arr = sorted(v["buffer"], key=lambda item: item["x"])
+        buffer = io.StringIO()
+        for c in sorted_arr:
+            buffer.write(c.get("char"))
+
+        content = buffer.getvalue()
+
         matchers = pattern2.findall(content)
         if len(matchers) < 1:
             pre_idx = k- 1
@@ -70,13 +79,16 @@ def to_lines(resp):
             prev = collated_data[len(collated_data) - 1]
             prev.get("buff").write(content)
         else:
-            collated_data.append(v)
+            collated_data.append({
+                "buff": buffer,
+            })
 
     result_list = []
     for v in collated_data:
-        matches = pattern.findall(v.get("buff").getvalue())
-        if len(matches) <= 0:
-            logger.info("Opt.正则匹配失败,原句：{}".format(content))
+        content = v.get("buff").getvalue()
+        matches = pattern.findall(content)
+        if len(matches) < 1:
+            logger.error("Opt.正则匹配失败,原句：{}".format(content))
             continue
 
         result_list.append(matches[0])
@@ -92,6 +104,7 @@ def match_result(resp):
 
     for v in collated_data:
         role, event, content = v
+        content = replace_keywords(content)
 
         role = role.replace(" ", "", -1).strip()
         content = content.strip()
@@ -99,8 +112,9 @@ def match_result(resp):
 
         message_id = f"{role}|{event}|{content}".replace(" ", "", -1)
 
+        logger.info(f"{role} 发送:{content}")
         if not db.is_sent(message_id):
-            logger.info(f"{role} 发送:{content}")
+            # logger.info(f"{role} 发送:{content}")
             db.insert_send_history(message_id)
             # if discord.send_msg_by_webhook(role, content):
             #     db.in

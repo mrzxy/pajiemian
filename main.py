@@ -1,4 +1,8 @@
+import sys
 import time
+import os
+from sympy.strategies.core import switch
+
 from logger import logger
 from helper import get_dpi_scale, capture_and_crop, open_image_and_to_base64
 from matcher import match_result
@@ -28,19 +32,23 @@ def main():
         return
     match_result(resp)
 
+def debug():
+    for root, dirs, files in os.walk("case/debug"):
+        for file in files:
+            if 1 or file == "debug5.json":
+                resp = mock_detect_text(file)
+                match_result(resp)
 
 if __name__ == "__main__":
     interval = 5
-    # img_file = "/Users/zxy/Project/xianyu/capture/screenshots/5-1.png"
-    # resp = mock_detect_text("debug7.json")
-    # match_result(resp)
-    # main()
-    while True:
-        try:
-            main()
-        except Exception as e:
-            logger.error(e)
-        finally:
-            time.sleep(interval)
-
-# capture_and_crop(region=scaled_region, interval=1, count=1)
+    argv = sys.argv
+    if len(argv) > 1 and argv[1] == "debug":
+        debug()
+    else:
+        while True:
+            try:
+                main()
+            except Exception as e:
+                logger.error(e)
+            finally:
+                time.sleep(interval)
