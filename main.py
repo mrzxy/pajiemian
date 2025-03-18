@@ -1,8 +1,10 @@
+import logging
 import sys
 import time
 import os
 from sympy.strategies.core import switch
 
+from config import conf
 from logger import logger
 from helper import get_dpi_scale, capture_and_crop, open_image_and_to_base64
 from matcher import match_result
@@ -33,14 +35,14 @@ def main():
     match_result(resp)
 
 def debug():
+    logger.setLevel(logging.DEBUG)
     for root, dirs, files in os.walk("case/debug"):
         for file in files:
-            if 1 or file == "debug5.json":
+            if file == "debug7.json":
                 resp = mock_detect_text(file)
                 match_result(resp)
 
 if __name__ == "__main__":
-    interval = 5
     argv = sys.argv
     if len(argv) > 1 and argv[1] == "debug":
         debug()
@@ -51,4 +53,4 @@ if __name__ == "__main__":
             except Exception as e:
                 logger.error(e)
             finally:
-                time.sleep(interval)
+                time.sleep(conf["interval"])

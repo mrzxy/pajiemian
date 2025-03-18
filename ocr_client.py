@@ -8,9 +8,8 @@ import hashlib
 import hmac
 from urllib.parse import quote
 from logger import logger
+from config import conf
 
-AK = "xx"
-SK = "xx=="
 Region = "cn-beijing"
 Service = "cv"
 
@@ -132,7 +131,7 @@ def request(method, date, query, header, ak, sk, action, body):
 
 
 def mock_detect_text(file_name):
-    with (open(os.path.join("case", file_name), "r") as f):
+    with (open(os.path.join("case/debug", file_name), "r") as f):
         body = f.read()
         return json.loads(body)
 
@@ -146,7 +145,9 @@ def detect_text(img_base64):
         body = {
             "image_base64": img_base64
         }
-        response_body = request("POST", now, {}, {}, AK, SK, "OCRNormal", urlencode(body))
+        ak = conf.get("AK")
+        sk = conf.get("AK")
+        response_body = request("POST", now, {}, {}, ak, sk, "OCRNormal", urlencode(body))
         return response_body
 
     except Exception as err:

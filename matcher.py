@@ -68,6 +68,7 @@ def to_lines(resp):
         for c in sorted_arr:
             buffer.write(c.get("char"))
 
+
         content = buffer.getvalue()
 
         matchers = pattern2.findall(content)
@@ -111,6 +112,7 @@ def match_result(resp):
         event = event.strip()
 
         message_id = f"{role}|{event}|{content}".replace(" ", "", -1)
+        logger.debug(f"检测到: {role} 发送:{content}")
 
         if not db.is_sent(message_id):
             logger.info(f"{role} 发送:{content}")

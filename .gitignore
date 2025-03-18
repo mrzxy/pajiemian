@@ -4,3 +4,4 @@ screenshots
 venv
 case
 logs
+config.json
