@@ -1,6 +1,4 @@
-
-
-
+import re
 
 class TrieNode:
     def __init__(self):
@@ -9,41 +7,43 @@ class TrieNode:
 
 
 def build_trie():
+    # 假设这是你的 6000 个关键字列表
+    keywords = []
     with open('nasdaq.txt', 'r') as f:
-        keywords = [line.strip() for line in f]
-    root = TrieNode()
-    replacements = {word: "$" + word[1:] if word.startswith("S") else word for word in keywords}
-    for word, replacement in replacements.items():
-        node = root
-        for char in word:
-            if char not in node.children:
-                node.children[char] = TrieNode()
-            node = node.children[char]
-        node.end_word = replacement  # 存储最终替换内容
-    return root
+        for line in f:
+            keywords.append("S" + line.strip())
+            keywords.append("$" + line.strip())
 
+
+    # 将关键字按长度从长到短排序，避免短关键字被长关键字包含
+    keywords_sorted = sorted(keywords, key=lambda x: -len(x))
+
+    # 构建正则表达式模式，确保只匹配整个单词
+    pattern = re.compile(r'\b(' + '|'.join(re.escape(keyword) for keyword in keywords_sorted) + r')\b')
+
+    return pattern
+
+
+pattern = build_trie()
+
+
+def match_f(match):
+    keyword = match.group(0)
+    if not keyword.startswith('$'):
+        return f"${keyword[1:]}"  # 去掉第一个字符并在前面加上 $
+    return keyword
 
 def replace_keywords(text):
-    result = []
-    i, n = 0, len(text)
-    while i < n:
-        node = trie
-        j = i
-        match = None
-        while j < n and text[j] in node.children:
-            node = node.children[text[j]]
-            j += 1
-            if node.end_word:  # 找到最长匹配
-                match = (i, j, node.end_word)
-
-        if match:
-            result.append(match[2])  # 替换匹配到的单词
-            i = match[1]  # 跳过匹配的部分
-        else:
-            result.append(text[i])
-            i += 1
-
-    return ''.join(result)
+    return pattern.sub(match_f, text)
 
 
-trie = build_trie()
+if __name__ == '__main__':
+
+    # 替换函数，将匹配的关键字替换为对应的形式
+
+    # 示例句子
+    sentence = "$ZYXI is a company, STSLA is a car brand, and SQQQ is another keyword. SLA and TSLA are also here."
+
+    result = replace_keywords(sentence)
+
+    print(result)
