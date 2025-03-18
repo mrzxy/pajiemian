@@ -1,4 +1,5 @@
 import base64
+import shutil
 from datetime import datetime, timedelta
 
 import mss
@@ -119,8 +120,10 @@ def capture_and_crop(region=None, save_path="screenshots"):
             img = img.crop((0, 0, region[2], region[3]))  # 裁剪
 
         now = datetime.now()
-        filename = os.path.join(save_path, "screenshot_{}.pdf".format(now.strftime("%Y%m%d_%H%M%S")))
-        img.save(filename, "PDF", resolution=100.0)
+        # filename = os.path.join(save_path, "screenshot_{}.pdf".format(now.strftime("%Y%m%d_%H%M%S")))
+        # img.save(filename, "PDF", resolution=100.0)
+        filename = os.path.join(save_path, "screenshot_{}.png".format(now.strftime("%Y%m%d_%H%M%S")))
+        img.save(filename)
         logger.info(f"Saved: {filename}")
         return filename
     return None

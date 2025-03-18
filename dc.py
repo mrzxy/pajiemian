@@ -25,3 +25,5 @@ class Discord:
         else:
             print(f"发送失败: {response.status_code}, {response.text}")
             return False
+
+discord = Discord()

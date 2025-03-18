@@ -12,3 +12,5 @@ class DB:
         table = self.db.table("send_history")
         qry = Query()
         return table.contains(qry.uuid == uuid)
+
+db = DB()
