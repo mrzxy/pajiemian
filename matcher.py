@@ -102,7 +102,7 @@ def match_result(resp):
 
         if not db.is_sent(message_id):
             logger.info(f"{role} 发送:{content}")
-            # db.insert_send_history(message_id)
+            db.insert_send_history(message_id)
             # if discord.send_msg_by_webhook(role, content):
             #     db.in
 
