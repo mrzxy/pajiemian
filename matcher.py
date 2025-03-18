@@ -112,12 +112,11 @@ def match_result(resp):
 
         message_id = f"{role}|{event}|{content}".replace(" ", "", -1)
 
-        logger.info(f"{role} 发送:{content}")
         if not db.is_sent(message_id):
-            # logger.info(f"{role} 发送:{content}")
-            db.insert_send_history(message_id)
-            # if discord.send_msg_by_webhook(role, content):
-            #     db.in
+            logger.info(f"{role} 发送:{content}")
+            if discord.send_msg_by_webhook(role, content):
+                db.insert_send_history(message_id)
+                time.sleep(1)
 
 
 
