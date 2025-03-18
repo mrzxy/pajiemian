@@ -146,7 +146,7 @@ def detect_text(img_base64):
             "image_base64": img_base64
         }
         ak = conf.get("AK")
-        sk = conf.get("AK")
+        sk = conf.get("SK")
         response_body = request("POST", now, {}, {}, ak, sk, "OCRNormal", urlencode(body))
         return response_body
 
