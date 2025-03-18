@@ -75,7 +75,6 @@ def to_lines(resp):
     result_list = []
     for v in collated_data:
         matches = pattern.findall(v.get("buff").getvalue())
-        print(v.get("y"), v.get("buff").getvalue())
         if len(matches) <= 0:
             logger.info("Opt.正则匹配失败,原句：{}".format(content))
             continue
