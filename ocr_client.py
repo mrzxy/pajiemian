@@ -138,9 +138,6 @@ def mock_detect_text(file_name):
 
 def detect_text(img_base64):
     try:
-        with (open("./1", "w") as f):
-            f.write(img_base64)
-
         now = datetime.datetime.utcnow()
         body = {
             "image_base64": img_base64,
