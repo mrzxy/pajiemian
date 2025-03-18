@@ -39,8 +39,10 @@ def to_lines(resp):
                 append = True
             else:
                 # ocr 可能 发送人 在后面
-                new_char = buffer.getvalue()
-                last['buffer']. append({"x": new_x, "char": new_char})
+                # x > 500 可能是 日期提示(Mar 17, 2025)
+                if new_x < 500:
+                    new_char = buffer.getvalue()
+                    last['buffer']. append({"x": new_x, "char": new_char})
         else:
             append = True
 

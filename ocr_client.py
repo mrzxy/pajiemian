@@ -143,7 +143,8 @@ def detect_text(img_base64):
 
         now = datetime.datetime.utcnow()
         body = {
-            "image_base64": img_base64
+            "image_base64": img_base64,
+            "mode": "text_block"
         }
         ak = conf.get("AK")
         sk = conf.get("SK")

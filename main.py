@@ -38,7 +38,7 @@ def debug():
     logger.setLevel(logging.DEBUG)
     for root, dirs, files in os.walk("case/debug"):
         for file in files:
-            if file == "debug7.json":
+            if file == "debug8.json":
                 resp = mock_detect_text(file)
                 match_result(resp)
 
