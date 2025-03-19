@@ -98,10 +98,10 @@ def to_lines(resp):
     return result_list
 
 
-def match_result(resp):
+def match_result(resp, debug=False):
     if resp.get("code") != 10000:
         logger.error("接口返回Code:{}, Message:{}".format(resp.get("code"), resp.get("message")))
-        return
+        return False
 
     collated_data = to_lines(resp)
 
@@ -114,15 +114,17 @@ def match_result(resp):
         event = event.strip()
 
         message_id = f"{role}|{event}|{content}".replace(" ", "", -1)
-        logger.debug(f"检测到: {role} 发送:{content}")
 
-        if not db.is_sent(message_id):
+        if debug:
             logger.info(f"{role} 发送:{content}")
-            if discord.send_msg_by_webhook(role, content):
-                db.insert_send_history(message_id)
-                time.sleep(1)
+        else:
+            if not db.is_sent(message_id):
+                logger.info(f"{role} 发送:{content}")
+                if discord.send_msg_by_webhook(role, content):
+                    db.insert_send_history(message_id)
+                    time.sleep(1)
 
-
+    return True
 
 def match_result2( resp):
     pattern = re.compile(
