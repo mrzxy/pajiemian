@@ -9,6 +9,7 @@ import hmac
 from urllib.parse import quote
 from logger import logger
 from config import conf
+from matcher import to_lines
 
 Region = "cn-beijing"
 Service = "cv"
@@ -133,7 +134,11 @@ def request(method, date, query, header, ak, sk, action, body):
 def mock_detect_text(file_name):
     with (open(os.path.join("case/debug", file_name), "r") as f):
         body = f.read()
-        return json.loads(body)
+        resp = json.loads(body)
+        if resp.get("code") != 10000:
+            logger.error("接口返回Code:{}, Message:{}".format(resp.get("code"), resp.get("message")))
+            return False
+        return to_lines(resp)
 
 
 def detect_text(img_base64):

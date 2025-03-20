@@ -5,10 +5,11 @@ import os
 from datetime import datetime
 from config import conf
 from database import db
+from google_ocr import extract_text_from_image
 from image_hash import calculate_image_hash
 from logger import logger
 from helper import get_dpi_scale, capture_and_crop, open_image_and_to_base64
-from matcher import match_result
+from matcher import match_result, to_lines
 from ocr_client import  mock_detect_text, detect_text
 from collections import defaultdict
 daily_counter = defaultdict(int)
@@ -35,12 +36,13 @@ def main():
 
     daily_counter[event_date] += 1
 
-    resp = detect_text(open_image_and_to_base64(img_file))
+    resp = match_result(extract_text_from_image(img_file))
+    # resp = detect_text(open_image_and_to_base64(img_file))
     # resp = mock_detect_text("debug1.json")
     if resp is None:
         logger.info("OCR failed")
         return
-    if match_result(resp):
+    if resp:
         db.insert_processed_image(file_hash)
 
 def debug():
@@ -55,7 +57,12 @@ def debug():
         for file in files:
             if file == "debug8.json":
                 resp = mock_detect_text(file)
-                match_result(resp, True)
+                if resp.get("code") != 10000:
+                    logger.error("接口返回Code:{}, Message:{}".format(resp.get("code"), resp.get("message")))
+                    return False
+
+                collated_data = to_lines(resp)
+                match_result(collated_data, True)
 
 if __name__ == "__main__":
     argv = sys.argv
