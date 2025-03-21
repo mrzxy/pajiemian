@@ -5,7 +5,7 @@ import os
 from google.cloud import vision
 from google.cloud.vision_v1 import types
 
-def extract_text_from_image(image_path):
+def extract_text_from_image(image_path, debug=False):
     """
     使用 Google Vision API 从图片中提取文字
     :param image_path: 图片文件路径
@@ -35,13 +35,18 @@ def extract_text_from_image(image_path):
         return None
 
     # 将结果保存到 JSON 文件
-    response_json = vision.AnnotateImageResponse.to_json(response)
-    with open("response.json", 'w', encoding='utf-8') as json_file:
-        json.dump(json.loads(response_json), json_file, ensure_ascii=False, indent=4)
+    if debug:
+        response_json = vision.AnnotateImageResponse.to_json(response)
+        with open("case/response.json", 'w', encoding='utf-8') as json_file:
+            json.dump(json.loads(response_json), json_file, ensure_ascii=False, indent=4)
 
     return match_text(response)
 
-
+pattern2 = re.compile(
+    r"(\w{1,25})\s?"  # 匹配角色名（兼容空格）
+    r"(\d{1,2}/\d{1,2}/\d{2,4},\s?\d{1,2}(?::\d{1,2})?:\d{2}\s?[AP]M)\s?"  # 匹配事件时间
+    r"(.*)"  # 匹配内容
+)
 def match_text(response):
     full_text_annotation = response.full_text_annotation
     pages = full_text_annotation.pages
@@ -65,14 +70,27 @@ def match_text(response):
                                     vision.TextAnnotation.DetectedBreak.BreakType.EOL_SURE_SPACE,
                                     vision.TextAnnotation.DetectedBreak.BreakType.LINE_BREAK
                             ):
-                                word_text += ""
+                                word_text += " "
 
-                words_line_text += word_text
-
-                bbox = block.paragraphs[0].words[0].bounding_box.vertices
+                bbox = paragraph.words[0].bounding_box.vertices
                 x_min = min(v.x for v in bbox)
                 y_avg = sum(v.y for v in bbox) / 4  # 计算 y 坐标平均值，防止倾斜影响
-                block_words.append({"text": words_line_text, 'x':x_min, 'y':y_avg})
+                word_text = (word_text.replace("⚫ ", "")
+                                  .replace("⚫", "")
+                                   .replace("• ", "")
+                                   .replace("•", "")
+                                   .strip())
+                block_words.append({"text": word_text, 'x':x_min, 'y':y_avg})
+
+            # bbox = block.paragraphs[0].words[0].bounding_box.vertices
+            # x_min = min(v.x for v in bbox)
+            # y_avg = sum(v.y for v in bbox) / 4  # 计算 y 坐标平均值，防止倾斜影响
+            # words_line_text = (words_line_text.replace("⚫ ", "")
+            #                   .replace("⚫", "")
+            #                    .replace("• ", "")
+            #                    .replace("•", "")
+            #                    .strip())
+            # block_words.append({"text": words_line_text, 'x':x_min, 'y':y_avg})
 
         block_words.sort(key=lambda e: e.get('y'))
 
@@ -86,10 +104,20 @@ def match_text(response):
         if item.get('y') - last.get('y')  >= 4:
             temp_group.append(item)
         else:
+            # 判断内容是否还有内容（防止T3如果换行，那么两条消息的行距就会 <=4）
+
+            # T3如果换行，那么两条消息的行距就会 <=4
+            # 所以还要判断当前
             if last.get('x') < item.get('x'):
-                last['text'] = last.get('text') + ' ' + item.get('text')
+                if pattern2.findall(item.get('text')):
+                    temp_group.append(item)
+                else:
+                    last['text'] = last.get('text') + ' ' + item.get('text')
             else:
-                last['text'] = item.get('text') + ' ' + last.get('text')
+                if pattern2.findall(last.get('text')):
+                    temp_group.append(item)
+                else:
+                    last['text'] = item.get('text') + ' ' + last.get('text')
 
     pattern = re.compile(
         r"(D\s?P|Rickman|Kira)\s?"  # 匹配角色名（兼容空格）
@@ -104,6 +132,7 @@ def match_text(response):
         if len(matches) < 1:
             logger.error("Opt.正则匹配失败,原句：{}".format(content))
             continue
+
         result_list.append(matches[0])
 
     # for x in temp_group:
@@ -111,10 +140,10 @@ def match_text(response):
     return result_list
 
 if __name__ == "__main__":
-    image_path = "screenshots/7.png"  # 替换为你的图片路径
-    # extracted_text = extract_text_from_image(image_path)
+    image_path = "screenshots/bug03.png"  # 替换为你的图片路径
+    # extracted_text = extract_text_from_image(image_path, True)
     # print("提取的文本:", extracted_text)
-    with open("response.json", 'r', encoding='utf-8') as json_file:
+    with open("case/response.json", 'r', encoding='utf-8') as json_file:
         data = json.load(json_file)
         response = types.AnnotateImageResponse.from_json(json.dumps(data))
         result = match_text(response)
