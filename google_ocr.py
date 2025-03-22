@@ -5,6 +5,7 @@ import os
 from google.cloud import vision
 from google.cloud.vision_v1 import types
 
+
 def extract_text_from_image(image_path, debug=False):
     """
     使用 Google Vision API 从图片中提取文字
@@ -13,16 +14,16 @@ def extract_text_from_image(image_path, debug=False):
     """
     # 设置 Google Cloud 认证 JSON 文件路径
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'gkey.json'
-    
+
     # 初始化客户端
     client = vision.ImageAnnotatorClient()
-    
+
     # 读取图片文件
     with open(image_path, 'rb') as image_file:
         content = image_file.read()
-    
+
     image = vision.Image(content=content)
-    
+
     # 调用 API 进行文本检测
     response = client.text_detection(image=image)
 
@@ -42,11 +43,14 @@ def extract_text_from_image(image_path, debug=False):
 
     return match_text(response)
 
+
 pattern2 = re.compile(
     r"(\w{1,25})\s?"  # 匹配角色名（兼容空格）
     r"(\d{1,2}/\d{1,2}/\d{2,4},\s?\d{1,2}(?::\d{1,2})?:\d{2}\s?[AP]M)\s?"  # 匹配事件时间
     r"(.*)"  # 匹配内容
 )
+
+
 def match_text(response):
     full_text_annotation = response.full_text_annotation
     pages = full_text_annotation.pages
@@ -57,40 +61,69 @@ def match_text(response):
         for block in page.blocks:
             words_line_text = ""
             for paragraph in block.paragraphs:
-                word_text = ""
+                word_text_list = []
+                is_break = False
+                is_break_first = False
+                is_app = False
+                special_block = []
                 for word in paragraph.words:
+                    text_block = ""
                     for symbol in word.symbols:
-                        word_text += symbol.text
+                        if is_break:
+                            if is_app:
+                                special_block[len(special_block) - 1]['text'] += symbol.text
+                                if hasattr(symbol, "property") and hasattr(symbol.property, "detected_break"):
+                                    break_type = symbol.property.detected_break.type_
+                                    if break_type == vision.TextAnnotation.DetectedBreak.BreakType.SPACE:
+                                        special_block[len(special_block) - 1]['text'] += " "
+                                    elif break_type in (
+                                            vision.TextAnnotation.DetectedBreak.BreakType.EOL_SURE_SPACE,
+                                            vision.TextAnnotation.DetectedBreak.BreakType.LINE_BREAK
+                                    ):
+                                        is_break = True
+                                        is_break_first = True
+                                        is_app = False
+                                continue
+                            elif is_break_first:
+                                is_break_first = False
+                                tmp = symbol.bounding_box.vertices[0]
+                                tmp2 = paragraph.words[0].symbols[0].bounding_box.vertices[0]
+                                # 说明可能截取错误，需要重新修正
+                                if abs(tmp.x - tmp2.x) < 3:
+                                    special_block.append({
+                                        'text': symbol.text,
+                                        'x': tmp.x,
+                                        'y': tmp.y,
+                                    })
+                                    is_app = True
+                                    continue
+
+                        text_block += symbol.text
                         # 处理空格或换行
                         if hasattr(symbol, "property") and hasattr(symbol.property, "detected_break"):
                             break_type = symbol.property.detected_break.type_
                             if break_type == vision.TextAnnotation.DetectedBreak.BreakType.SPACE:
-                                word_text += " "
+                                text_block += " "
                             elif break_type in (
                                     vision.TextAnnotation.DetectedBreak.BreakType.EOL_SURE_SPACE,
                                     vision.TextAnnotation.DetectedBreak.BreakType.LINE_BREAK
                             ):
-                                word_text += " "
+                                is_break = True
+                                is_break_first = True
+                    inner_x = word.symbols[0].bounding_box.vertices[0].x
+                    inner_y = word.symbols[0].bounding_box.vertices[0].y
 
+                    word_text_list.append({
+                        'text': text_block,
+                        'x': inner_x,
+                        'y': inner_y,
+                    })
+                word_text = "".join([w['text'] for w in word_text_list])
                 bbox = paragraph.words[0].bounding_box.vertices
-                x_min = min(v.x for v in bbox)
-                y_avg = sum(v.y for v in bbox) / 4  # 计算 y 坐标平均值，防止倾斜影响
-                word_text = (word_text.replace("⚫ ", "")
-                                  .replace("⚫", "")
-                                   .replace("• ", "")
-                                   .replace("•", "")
-                                   .strip())
-                block_words.append({"text": word_text, 'x':x_min, 'y':y_avg})
-
-            # bbox = block.paragraphs[0].words[0].bounding_box.vertices
-            # x_min = min(v.x for v in bbox)
-            # y_avg = sum(v.y for v in bbox) / 4  # 计算 y 坐标平均值，防止倾斜影响
-            # words_line_text = (words_line_text.replace("⚫ ", "")
-            #                   .replace("⚫", "")
-            #                    .replace("• ", "")
-            #                    .replace("•", "")
-            #                    .strip())
-            # block_words.append({"text": words_line_text, 'x':x_min, 'y':y_avg})
+                word_text = strip_text(word_text)
+                # print(word_text)
+                block_words.append({"text": word_text, 'x': bbox[0].x, 'y': bbox[0].y})
+                block_words.extend(special_block)
 
         block_words.sort(key=lambda e: e.get('y'))
 
@@ -101,7 +134,7 @@ def match_text(response):
             continue
 
         last = temp_group[len(temp_group) - 1]
-        if item.get('y') - last.get('y')  >= 4:
+        if item.get('y') - last.get('y') >= 4:
             temp_group.append(item)
         else:
             # 判断内容是否还有内容（防止T3如果换行，那么两条消息的行距就会 <=4）
@@ -139,11 +172,19 @@ def match_text(response):
     #     print("{} x:{} y:{}".format(x.get('text'), x.get('x'), x.get('y')))
     return result_list
 
+
+def strip_text(text):
+    chars = ["⚫", "•", "◉"]
+    for char in chars:
+        text = text.replace(char, "").replace(f"{char} ", "")
+    return text
+
+
 if __name__ == "__main__":
-    image_path = "screenshots/bug03.png"  # 替换为你的图片路径
+    image_path = "screenshots/7.png"  # 替换为你的图片路径
     # extracted_text = extract_text_from_image(image_path, True)
     # print("提取的文本:", extracted_text)
-    with open("case/response.json", 'r', encoding='utf-8') as json_file:
+    with open("case/bug02.json", 'r', encoding='utf-8') as json_file:
         data = json.load(json_file)
         response = types.AnnotateImageResponse.from_json(json.dumps(data))
         result = match_text(response)
