@@ -1,5 +1,8 @@
 import requests
 
+from emqx import to_publish_role
+from logger import logger
+
 webhooks = {
     "dp": "https://discord.com/api/webhooks/1351026063521611786/ocZvPs3Sj94Nye_bWOMlXfxv5XedwxQ_7yScMlvmarGI1-x5CzbTLbTNZUurm8NV5xmP",
     "rickman": "https://discord.com/api/webhooks/1351026161542627348/TrbGb9vI6DpglWEibiSCcDs49G7e7pNQBod1lulbsnwMes9thHB4hUHPRcsc5J2yCNNx",
@@ -15,7 +18,10 @@ class Discord:
         pass
 
     def send_msg_by_webhook(self, user, msg):
+
         key = user.lower()
+        logger.info("发送 emqx {}".format(to_publish_role(key, msg)))
+
         if key not in webhooks:
             print("Webhook not found for user: " + user)
             return
