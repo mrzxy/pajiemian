@@ -1,5 +1,6 @@
 import base64
 import shutil
+import time
 from datetime import datetime, timedelta
 
 import mss
@@ -69,7 +70,7 @@ def create_date_folder(base_dir):
 
     return date_folder
 
-def delete_old_folders(base_dir, days_to_keep=7):
+def delete_old_folders(base_dir, days_to_keep=5):
     """
     删除超过指定天数的旧文件夹。
 
@@ -97,6 +98,8 @@ def delete_old_folders(base_dir, days_to_keep=7):
                 # 如果文件夹名称不是日期格式，则跳过
                 continue
 
+del_flag = 0
+
 def capture_and_crop(region=None, save_path="screenshots"):
     """
     定期截图并裁剪。
@@ -106,6 +109,11 @@ def capture_and_crop(region=None, save_path="screenshots"):
     :param save_path: 图片保存路径
     """
     save_path = create_date_folder(save_path)
+    global del_flag
+    if del_flag != datetime.now().hour:
+        print("开始删除过期文件夹")
+        delete_old_folders(save_path)
+        del_flag = datetime.now().hour
 
     with mss.mss() as sct:
         monitor = sct.monitors[1] if region is None else {"left": region[0], "top": region[1], "width": region[2],
@@ -136,3 +144,7 @@ def corp_image(image_path, region, save_path="screenshots"):
         img.save(filename)
         logger.info(f"Saved: {filename}")
         return filename
+
+if __name__ == "__main__":
+    capture_and_crop(None)
+    capture_and_crop(None)

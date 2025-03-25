@@ -6,7 +6,7 @@ from google.cloud import vision
 from google.cloud.vision_v1 import types
 
 
-def extract_text_from_image(image_path, debug=False):
+def extract_text_from_image(image_path, debug=""):
     """
     使用 Google Vision API 从图片中提取文字
     :param image_path: 图片文件路径
@@ -36,9 +36,9 @@ def extract_text_from_image(image_path, debug=False):
         return None
 
     # 将结果保存到 JSON 文件
-    if debug:
+    if debug != "":
         response_json = vision.AnnotateImageResponse.to_json(response)
-        with open("case/response.json", 'w', encoding='utf-8') as json_file:
+        with open("case/" + debug + ".json", 'w', encoding='utf-8') as json_file:
             json.dump(json.loads(response_json), json_file, ensure_ascii=False, indent=4)
 
     return match_text(response)
@@ -121,7 +121,6 @@ def match_text(response):
                 word_text = "".join([w['text'] for w in word_text_list])
                 bbox = paragraph.words[0].bounding_box.vertices
                 word_text = strip_text(word_text)
-                # print(word_text)
                 block_words.append({"text": word_text, 'x': bbox[0].x, 'y': bbox[0].y})
                 block_words.extend(special_block)
 
@@ -134,12 +133,12 @@ def match_text(response):
             continue
 
         last = temp_group[len(temp_group) - 1]
-        if item.get('y') - last.get('y') >= 4:
+        if abs(item.get('y') - last.get('y')) >= 40:
             temp_group.append(item)
         else:
-            # 判断内容是否还有内容（防止T3如果换行，那么两条消息的行距就会 <=4）
+            # 判断内容是否还有内容（防止T3如果换行，那么两条消息的行距就会 <=40）
 
-            # T3如果换行，那么两条消息的行距就会 <=4
+            # T3如果换行，那么两条消息的行距就会 <=40
             # 所以还要判断当前
             if last.get('x') < item.get('x'):
                 if pattern2.findall(item.get('text')):
@@ -148,7 +147,12 @@ def match_text(response):
                     last['text'] = last.get('text') + ' ' + item.get('text')
             else:
                 if pattern2.findall(last.get('text')):
-                    temp_group.append(item)
+                    # bug05.png 换行情况
+                    if pattern2.findall(item.get('text')):
+                        temp_group.append(item)
+                    else:
+                        last['text'] = last.get('text') + ' ' + item.get('text')
+
                 else:
                     last['text'] = item.get('text') + ' ' + last.get('text')
 
@@ -181,10 +185,11 @@ def strip_text(text):
 
 
 if __name__ == "__main__":
-    image_path = "screenshots/7.png"  # 替换为你的图片路径
-    # extracted_text = extract_text_from_image(image_path, True)
+    code = "bug08"
+    image_path = f"screenshots/{code}.png"
+    extracted_text = extract_text_from_image(image_path,  code)
     # print("提取的文本:", extracted_text)
-    with open("case/bug02.json", 'r', encoding='utf-8') as json_file:
+    with open(f"case/{code}.json", 'r', encoding='utf-8') as json_file:
         data = json.load(json_file)
         response = types.AnnotateImageResponse.from_json(json.dumps(data))
         result = match_text(response)
