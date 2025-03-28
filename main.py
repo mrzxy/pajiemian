@@ -1,5 +1,6 @@
 import logging
 import sys
+import threading
 import time
 import os
 from datetime import datetime
@@ -12,8 +13,11 @@ from helper import get_dpi_scale, capture_and_crop, open_image_and_to_base64
 from matcher import match_result, to_lines
 from ocr_client import  mock_detect_text, detect_text
 from collections import defaultdict
+
+
 daily_counter = defaultdict(int)
-def main():
+
+def task():
     event_date = datetime.now().strftime("%Y-%m-%d")
     logger.info("开始截屏, 累计调用OCR次数: {}".format(daily_counter.get(event_date)))
     scale = 1
@@ -64,15 +68,25 @@ def debug():
                 collated_data = to_lines(resp)
                 match_result(collated_data, True)
 
+def main():
+    print("开始抓取")
+    while True:
+        try:
+            task()
+        except Exception as e:
+            logger.error(e)
+        finally:
+            time.sleep(conf["interval"])
+
 if __name__ == "__main__":
     argv = sys.argv
     if len(argv) > 1 and argv[1] == "debug":
         debug()
     else:
-        while True:
-            try:
-                main()
-            except Exception as e:
-                logger.error(e)
-            finally:
-                time.sleep(conf["interval"])
+        thread2 = threading.Thread(target=main)
+
+        thread2.start()
+
+        thread2.join()
+        print("程序 end")
+

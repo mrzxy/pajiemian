@@ -1,4 +1,6 @@
 import json
+import logging
+
 from logger import logger
 import re
 import os
@@ -50,6 +52,7 @@ pattern2 = re.compile(
     r"(.*)"  # 匹配内容
 )
 
+date_pattern = r"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}\s*,?\s*\d{4}$"
 
 def match_text(response):
     full_text_annotation = response.full_text_annotation
@@ -66,7 +69,9 @@ def match_text(response):
                 is_break_first = False
                 is_app = False
                 special_block = []
-                for word in paragraph.words:
+                # print(paragraph.bounding_box)
+                for kkk in range(len(paragraph.words)):
+                    word = paragraph.words[kkk]
                     text_block = ""
                     for symbol in word.symbols:
                         if is_break:
@@ -119,42 +124,62 @@ def match_text(response):
                         'y': inner_y,
                     })
                 word_text = "".join([w['text'] for w in word_text_list])
-                bbox = paragraph.words[0].bounding_box.vertices
                 word_text = strip_text(word_text)
-                block_words.append({"text": word_text, 'x': bbox[0].x, 'y': bbox[0].y})
+                if re.fullmatch(date_pattern, word_text,  re.IGNORECASE):
+                    logger.debug(f"忽略了{word_text}")
+                    continue
+                bbox = paragraph.words[0].bounding_box.vertices
+                block_words.append({"text": word_text, 'x': bbox[0].x, 'y': bbox[0].y, 'rx': paragraph.bounding_box.vertices[1].x})
                 block_words.extend(special_block)
 
         block_words.sort(key=lambda e: e.get('y'))
 
-    temp_group = []
+    # 抹平y
+    prev = None
+    processed_block_words = []
     for item in block_words:
-        if len(temp_group) == 0:
-            temp_group.append(item)
+        if prev is None:
+            processed_block_words.append([item])
+            prev = item
             continue
 
-        last = temp_group[len(temp_group) - 1]
-        if abs(item.get('y') - last.get('y')) >= 40:
-            temp_group.append(item)
+        if abs(item.get('y') - prev.get('y')) >= 40:
+            processed_block_words.append([item])
         else:
-            # 判断内容是否还有内容（防止T3如果换行，那么两条消息的行距就会 <=40）
+            last = processed_block_words[-1][-1]
 
-            # T3如果换行，那么两条消息的行距就会 <=40
-            # 所以还要判断当前
-            if last.get('x') < item.get('x'):
+            if last.get('x') <= item.get('x'):
                 if pattern2.findall(item.get('text')):
-                    temp_group.append(item)
+                    processed_block_words.append([item])
                 else:
-                    last['text'] = last.get('text') + ' ' + item.get('text')
+                    item['text'] = " "+item['text']
+                    processed_block_words[-1].append(item)
             else:
                 if pattern2.findall(last.get('text')):
                     # bug05.png 换行情况
                     if pattern2.findall(item.get('text')):
-                        temp_group.append(item)
+                        processed_block_words.append([item])
                     else:
-                        last['text'] = last.get('text') + ' ' + item.get('text')
-
+                        item['text'] = " " + item['text']
+                        processed_block_words[-1].append(item)
                 else:
-                    last['text'] = item.get('text') + ' ' + last.get('text')
+                    if pattern2.findall(item.get('text')):
+                        processed_block_words.append([item])
+                    else:
+                        insert_pos = len(processed_block_words[-1]) - 1
+                        item['text'] = " " + item['text']
+                        processed_block_words[-1].insert(insert_pos,item)
+        prev = item
+
+
+    temp_group = []
+    for line_item in processed_block_words:
+        # line_item.sort(key=lambda e: e.get('x'))
+        if len(line_item) > 2:
+            if line_item[1]['text'].strip() == "0":
+                del line_item[1]
+
+        temp_group.append("".join([w['text'] for w in line_item]))
 
     pattern = re.compile(
         r"(D\s?P|Rickman|Kira)\s?"  # 匹配角色名（兼容空格）
@@ -164,7 +189,7 @@ def match_text(response):
 
     result_list = []
     for v in temp_group:
-        content = v['text']
+        content = v
         matches = pattern.findall(content)
         if len(matches) < 1:
             logger.error("Opt.正则匹配失败,原句：{}".format(content))
@@ -185,10 +210,11 @@ def strip_text(text):
 
 
 if __name__ == "__main__":
-    code = "bug08"
+    code = "bug01"
     image_path = f"screenshots/{code}.png"
-    extracted_text = extract_text_from_image(image_path,  code)
+    # extracted_text = extract_text_from_image(image_path,  code)
     # print("提取的文本:", extracted_text)
+    logger.setLevel(logging.DEBUG)
     with open(f"case/{code}.json", 'r', encoding='utf-8') as json_file:
         data = json.load(json_file)
         response = types.AnnotateImageResponse.from_json(json.dumps(data))
