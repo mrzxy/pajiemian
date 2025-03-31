@@ -83,7 +83,10 @@ def main():
 if __name__ == "__main__":
     argv = sys.argv
     if len(argv) > 1 and argv[1] == "debug":
-        debug()
+        # debug()
+        thread1 = threading.Thread(target=asyncio.run, args=(monitor_audio(),))
+        thread1.start()
+        thread1.join()
     else:
         thread1 = None
         if len(argv) > 1 and argv[1] == "sound":
