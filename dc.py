@@ -16,6 +16,17 @@ webhooks = {
 class Discord:
     def __init__(self):
         pass
+    def call_webhook_api(self, msg):
+        webhook = "https://discord.com/api/webhooks/1356201454120992858/sebb92fhtfyRIrW7Jf1ShCECxkgWP71sR5ESLHwsycHyLn4owyy20XIO-vaGLHWin2ue"
+        payload = {"content": msg}
+        response = requests.post(webhook, json=payload)
+
+        if response.status_code == 204:
+            print("消息发送成功！")
+            return True
+        else:
+            print(f"发送失败: {response.status_code}, {response.text}")
+            return False
 
     def send_msg_by_webhook(self, user, msg):
 

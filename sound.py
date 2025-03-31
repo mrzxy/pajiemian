@@ -7,7 +7,9 @@ from scipy.io.wavfile import write
 import time
 import os
 
+from automic import global_counter
 from asr import AsrWsClient
+from dc import discord
 
 # 配置参数
 SAMPLE_RATE = 16000  # 采样率
@@ -33,6 +35,7 @@ def get_new_filename():
         count += 1
 
 async def process_audio(recv_queue):
+    global_counter.increment()
     try:
         while True:
             result = await recv_queue.get()
@@ -42,16 +45,18 @@ async def process_audio(recv_queue):
                 await asyncio.sleep(0.1)
                 continue
 
-
             if 'utterances' in result['payload_msg']['result']:
                 rr = result['payload_msg']['result']
                 for vv in rr['utterances']:
                     if vv['definite']:
-                        print(rr['text'])
+                        discord.call_webhook_api(rr['text'])
+
+                        # 保存录音文件
 
     except Exception as e:
         print(f"Unexpected error 222: {e}")
     print("process_audio done")
+    global_counter.decrement()
 
 
 async def finish_tasks(task1, task2):
@@ -64,6 +69,7 @@ async def finish_tasks(task1, task2):
 
 async def monitor_audio():
     while True:
+        print("当前协程数",global_counter.get())
         silence_counter = 0
         recording = False
         recording = False
@@ -105,7 +111,6 @@ async def monitor_audio():
         await audio_queue.put(None)
         print("录音结束")
         asyncio.create_task(finish_tasks(task1, task2))
-        print("?????")
 
 if __name__ == "__main__":
     asyncio.run(monitor_audio())

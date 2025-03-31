@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import sys
 import threading
@@ -14,6 +15,7 @@ from matcher import match_result, to_lines
 from ocr_client import  mock_detect_text, detect_text
 from collections import defaultdict
 
+from sound import monitor_audio
 
 daily_counter = defaultdict(int)
 
@@ -83,10 +85,15 @@ if __name__ == "__main__":
     if len(argv) > 1 and argv[1] == "debug":
         debug()
     else:
+        thread1 = None
+        if len(argv) > 1 and argv[1] == "sound":
+            thread1 = threading.Thread(target=asyncio.run, args=(monitor_audio(),))
+            thread1.start()
         thread2 = threading.Thread(target=main)
-
         thread2.start()
 
         thread2.join()
+        if thread1 is not None:
+            thread1.join()
         print("程序 end")
 

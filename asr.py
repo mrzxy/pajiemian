@@ -10,6 +10,8 @@ from io import BytesIO
 import aiofiles
 import websockets
 
+from automic import global_counter
+
 PROTOCOL_VERSION = 0b0001
 DEFAULT_HEADER_SIZE = 0b0001
 
@@ -214,6 +216,7 @@ class AsrWsClient:
         return res
 
     async def segment_data_processor(self):
+        global_counter.increment()
         reqid = str(uuid.uuid4())
         seq = 1
         request_params = self.construct_request(reqid)
@@ -299,7 +302,8 @@ class AsrWsClient:
                 print(f"Response body: {e.response.text}")
         except Exception as e:
             print(f"Unexpected error: {e}")
-            traceback.print_exc()
+
+        global_counter.increment()
 
 
 async def execute(self):
