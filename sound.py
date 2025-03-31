@@ -103,7 +103,7 @@ async def monitor_audio():
         task1 = asyncio.create_task(client.segment_data_processor())
         task2 = asyncio.create_task(process_audio(recv_queue))
 
-        with sd.InputStream(callback=callback,  samplerate=SAMPLE_RATE, channels=CHANNEL_INDEX, device=DEVICE_INDEX):
+        with sd.InputStream(callback=callback, blocksize=2048, samplerate=SAMPLE_RATE, channels=CHANNEL_INDEX, device=DEVICE_INDEX):
             print("开始监听监听中...")
             while silence_counter < 3:
                 await asyncio.sleep(BLOCK_DURATION)
