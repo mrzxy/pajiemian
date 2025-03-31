@@ -2,8 +2,6 @@ import asyncio
 
 import sounddevice as sd
 import numpy as np
-from black.nodes import last_leaf
-from scipy.io.wavfile import write
 import time
 import os
 
