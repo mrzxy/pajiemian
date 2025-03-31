@@ -47,7 +47,7 @@ async def process_audio(recv_queue):
                 rr = result['payload_msg']['result']
                 for vv in rr['utterances']:
                     if vv['definite']:
-                        # discord.call_webhook_api(rr['text'])
+                        discord.call_webhook_api(rr['text'])
                         print(rr['text'])
 
                         # 保存录音文件
