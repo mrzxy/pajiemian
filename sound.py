@@ -12,9 +12,9 @@ from dc import discord
 # 配置参数
 SAMPLE_RATE = 16000  # 采样率
 BLOCK_DURATION = 1  # 每次处理 1 秒音频
-VOLUME_THRESHOLD = 0.01  # 音量阈值（调整以适应不同声音）
+VOLUME_THRESHOLD = 0.1  # 音量阈值（调整以适应不同声音）
 SILENCE_LIMIT = 3  # 5 秒无声音则停止录制
-DEVICE_INDEX = 2
+DEVICE_INDEX = 1
 CHANNEL_INDEX = 1
 
 recording_count = 1  # 录音文件计数
@@ -33,6 +33,7 @@ def get_new_filename():
 
 async def process_audio(recv_queue):
     global_counter.increment()
+    print("process_audio begin", global_counter.get())
     try:
         while True:
             result = await recv_queue.get()
@@ -46,14 +47,15 @@ async def process_audio(recv_queue):
                 rr = result['payload_msg']['result']
                 for vv in rr['utterances']:
                     if vv['definite']:
-                        discord.call_webhook_api(rr['text'])
+                        # discord.call_webhook_api(rr['text'])
+                        print(rr['text'])
 
                         # 保存录音文件
 
     except Exception as e:
         print(f"Unexpected error 222: {e}")
-    print("process_audio done")
     global_counter.decrement()
+    print("process_audio done", global_counter.get())
 
 
 async def finish_tasks(task1, task2):
@@ -62,7 +64,7 @@ async def finish_tasks(task1, task2):
         await asyncio.gather(task1, task2)
     except asyncio.CancelledError:
         print("任务被取消")
-    print("任务完成")
+    print("任务完成", global_counter.get())
 
 async def monitor_audio():
     while True:

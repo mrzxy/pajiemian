@@ -301,7 +301,8 @@ class AsrWsClient:
         except Exception as e:
             print(f"Unexpected error: {e}")
 
-        global_counter.increment()
+        global_counter.decrement()
+        print("asr done")
 
 
 async def execute(self):

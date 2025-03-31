@@ -5,6 +5,8 @@ import threading
 import time
 import os
 from datetime import datetime
+from signal import signal, SIGINT
+
 from config import conf
 from database import db
 from google_ocr import extract_text_from_image
@@ -74,29 +76,40 @@ def main():
     print("开始抓取")
     while True:
         try:
-            task()
+            # task()
+            time.sleep(1)
         except Exception as e:
             logger.error(e)
         finally:
             time.sleep(conf["interval"])
 
+def signal_handler(sig, frame):
+    print("\n接收到中断信号，正在优雅退出...")
+    sys.exit(0)
+
 if __name__ == "__main__":
+    signal(SIGINT, signal_handler)
     argv = sys.argv
     if len(argv) > 1 and argv[1] == "debug":
-        # debug()
-        thread1 = threading.Thread(target=asyncio.run, args=(monitor_audio(),))
-        thread1.start()
-        thread1.join()
+        asyncio.run(monitor_audio())
     else:
-        thread1 = None
-        if len(argv) > 1 and argv[1] == "sound":
-            thread1 = threading.Thread(target=asyncio.run, args=(monitor_audio(),))
-            thread1.start()
-        thread2 = threading.Thread(target=main)
+        thread1 = threading.Thread(target=asyncio.run, args=(monitor_audio(), ), daemon=True)
+        thread1.start()
+
+        thread2 = threading.Thread(target=main, daemon=True)
         thread2.start()
 
-        thread2.join()
-        if thread1 is not None:
-            thread1.join()
-        print("程序 end")
+        try:
+            # 等待线程结束（非阻塞方式）
+            while True:
+                if thread1 and thread1.is_alive():
+                    thread1.join(0.1)
+                if thread2.is_alive():
+                    thread2.join(0.1)
+                if (thread1 is None or not thread1.is_alive()) and not thread2.is_alive():
+                    break
+        except KeyboardInterrupt:
+            print("\n主线程收到中断")
+
+        print("程序正常结束")
 
