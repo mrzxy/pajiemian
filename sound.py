@@ -14,9 +14,8 @@ SAMPLE_RATE = 16000  # 采样率
 BLOCK_DURATION = 1  # 每次处理 1 秒音频
 VOLUME_THRESHOLD = 0.01  # 音量阈值（调整以适应不同声音）
 SILENCE_LIMIT = 3  # 5 秒无声音则停止录制
-DEVICE_INDEX = 13  # CABLE Output 设备索引（请替换为你的设备 ID）
-
 DEVICE_INDEX = 2
+CHANNEL_INDEX = 1
 
 recording_count = 1  # 录音文件计数
 os.makedirs("recordings", exist_ok=True)  # 创建存储目录
@@ -102,7 +101,7 @@ async def monitor_audio():
         task1 = asyncio.create_task(client.segment_data_processor())
         task2 = asyncio.create_task(process_audio(recv_queue))
 
-        with sd.InputStream(callback=callback,  samplerate=SAMPLE_RATE, channels=1, device=DEVICE_INDEX):
+        with sd.InputStream(callback=callback,  samplerate=SAMPLE_RATE, channels=CHANNEL_INDEX, device=DEVICE_INDEX):
             print("开始监听监听中...")
             while silence_counter < 3:
                 await asyncio.sleep(BLOCK_DURATION)
