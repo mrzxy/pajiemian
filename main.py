@@ -76,8 +76,7 @@ def main():
     print("开始抓取")
     while True:
         try:
-            # task()
-            time.sleep(1)
+            task()
         except Exception as e:
             logger.error(e)
         finally:

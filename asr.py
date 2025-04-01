@@ -178,6 +178,7 @@ class AsrWsClient:
                 "model_name": "bigmodel",
                 "enable_punc": True,
                 "result_type": "single",
+                "show_utterances": True,
                 # "vad_segment_duration": 800,
             }
         }

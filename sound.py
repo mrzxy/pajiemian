@@ -14,6 +14,7 @@ SAMPLE_RATE = 16000  # 采样率
 BLOCK_DURATION = 1  # 每次处理 1 秒音频
 VOLUME_THRESHOLD = 0.1  # 音量阈值（调整以适应不同声音）
 SILENCE_LIMIT = 3  # 5 秒无声音则停止录制
+DEVICE_INDEX = 2
 DEVICE_INDEX = 13
 CHANNEL_INDEX = 1
 
@@ -48,7 +49,7 @@ async def process_audio(recv_queue):
                 for vv in rr['utterances']:
                     if vv['definite']:
                         discord.call_webhook_api(rr['text'])
-                        print(rr['text'])
+                        # print(rr['text'])
 
                         # 保存录音文件
 
