@@ -195,7 +195,11 @@ def match_text(response):
             logger.error("Opt.正则匹配失败,原句：{}".format(content))
             continue
 
-        result_list.append(matches[0])
+        role, event, content = matches[0]
+
+        content =  re.sub(r"^\(\d+\)[\W\s]+", "", content)
+
+        result_list.append((role, event, content))
 
     # for x in temp_group:
     #     print("{} x:{} y:{}".format(x.get('text'), x.get('x'), x.get('y')))
@@ -203,14 +207,14 @@ def match_text(response):
 
 
 def strip_text(text):
-    chars = ["⚫", "•", "◉"]
+    chars = ["⚫", "•", "◉", "●", "✪ |", "✪|", "✪"]
     for char in chars:
         text = text.replace(char, "").replace(f"{char} ", "")
     return text
 
 
 if __name__ == "__main__":
-    code = "bug01"
+    code = "bug12"
     image_path = f"screenshots/{code}.png"
     # extracted_text = extract_text_from_image(image_path,  code)
     # print("提取的文本:", extracted_text)
