@@ -94,7 +94,7 @@ def match_text(response):
                                 tmp = symbol.bounding_box.vertices[0]
                                 tmp2 = paragraph.words[0].symbols[0].bounding_box.vertices[0]
                                 # 说明可能截取错误，需要重新修正
-                                if abs(tmp.x - tmp2.x) < 3:
+                                if abs(tmp.x - tmp2.x) < 3 or (abs(tmp.x- tmp2.x) < 20 and tmp.x > 200):
                                     special_block.append({
                                         'text': symbol.text,
                                         'x': tmp.x,
@@ -163,7 +163,7 @@ def match_text(response):
                         item['text'] = " " + item['text']
                         processed_block_words[-1].append(item)
                 else:
-                    if pattern2.findall(item.get('text')):
+                    if pattern2.findall(item.get('text')) and pattern2.findall(last.get('text')):
                         processed_block_words.append([item])
                     else:
                         insert_pos = len(processed_block_words[-1]) - 1
@@ -214,7 +214,7 @@ def strip_text(text):
 
 
 if __name__ == "__main__":
-    code = "bug12"
+    code = "bug05"
     image_path = f"screenshots/{code}.png"
     # extracted_text = extract_text_from_image(image_path,  code)
     # print("提取的文本:", extracted_text)
