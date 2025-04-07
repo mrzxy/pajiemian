@@ -1,4 +1,5 @@
 import json
+from functools import cmp_to_key
 import logging
 
 from logger import logger
@@ -51,7 +52,12 @@ pattern2 = re.compile(
     r"(\d{1,2}/\d{1,2}/\d{2,4},\s?\d{1,2}(?::\d{1,2})?:\d{2}\s?[AP]M)\s?"  # 匹配事件时间
     r"(.*)"  # 匹配内容
 )
-
+def compare_dicts(a, b):
+    y_diff = abs(a['y'] - b['y'])
+    if y_diff < 5:
+        return a['x'] - b['x']
+    else:
+        return a['y'] - b['y']
 date_pattern = r"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}\s*,?\s*\d{4}$"
 
 def match_text(response):
@@ -134,6 +140,8 @@ def match_text(response):
 
         block_words.sort(key=lambda e: e.get('y'))
 
+    block_words = sorted(block_words, key=cmp_to_key(compare_dicts))
+
     # 抹平y
     prev = None
     processed_block_words = []
@@ -213,15 +221,36 @@ def strip_text(text):
     return text
 
 
+def batch_test():
+    pattern = re.compile(r'^bug\d{1,3}\.json$')
+    folder_path = "case"
+    for filename in os.listdir(folder_path):
+        # 检查文件名是否符合正则表达式
+        if pattern.match(filename):
+            file_path = os.path.join(folder_path, filename)
+            print(f"图片:{filename}")
+            code = filename.split(".")[0]
+            # image_path = f"screenshots/{code}.png"
+            # extracted_text = extract_text_from_image(image_path,  code)
+            # print("提取的文本:", extracted_text)
+            logger.setLevel(logging.DEBUG)
+            with open(f"case/{code}.json", 'r', encoding='utf-8') as json_file:
+                data = json.load(json_file)
+                response = types.AnnotateImageResponse.from_json(json.dumps(data))
+                result = match_text(response)
+                for x in result:
+                    print(f"行:{x}")
+
 if __name__ == "__main__":
-    code = "bug05"
-    image_path = f"screenshots/{code}.png"
-    # extracted_text = extract_text_from_image(image_path,  code)
-    # print("提取的文本:", extracted_text)
-    logger.setLevel(logging.DEBUG)
-    with open(f"case/{code}.json", 'r', encoding='utf-8') as json_file:
-        data = json.load(json_file)
-        response = types.AnnotateImageResponse.from_json(json.dumps(data))
-        result = match_text(response)
-        for x in result:
-            print(f"行:{x}")
+    batch_test()
+    # code = "bug15"
+    # image_path = f"screenshots/{code}.png"
+    # # extracted_text = extract_text_from_image(image_path,  code)
+    # # print("提取的文本:", extracted_text)
+    # logger.setLevel(logging.DEBUG)
+    # with open(f"case/{code}.json", 'r', encoding='utf-8') as json_file:
+    #     data = json.load(json_file)
+    #     response = types.AnnotateImageResponse.from_json(json.dumps(data))
+    #     result = match_text(response)
+    #     for x in result:
+    #         print(f"行:{x}")
