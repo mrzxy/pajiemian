@@ -1,34 +1,101 @@
+import asyncio
+
+from amazon_transcribe.handlers import TranscriptResultStreamHandler
+from amazon_transcribe.model import TranscriptEvent
 from google.cloud import speech_v1p1beta1 as speech
 import os
+from amazon_transcribe.client import TranscribeStreamingClient
+import boto3
+from botocore.exceptions import NoCredentialsError, PartialCredentialsError, ClientError
+import json
 
-def transcribe_audio(file_path):
+REGION = "us-east-1"
+with open("aws.json") as f:
+    config = json.load(f)
+os.environ["AWS_ACCESS_KEY_ID"] =  config["access_key_id"]
+os.environ["AWS_SECRET_ACCESS_KEY"] = config["secret_access_key"]
+os.environ["AWS_DEFAULT_REGION"] = REGION
 
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'gkey.json'
 
-    # 创建 SpeechClient 实例
-    client = speech.SpeechClient()
+def check_aws_credentials():
+    try:
+        # 使用 STS 获取当前身份
+        client = boto3.client('sts')
+        identity = client.get_caller_identity()
 
-    # 读取音频文件
-    with open(file_path, "rb") as audio_file:
-        content = audio_file.read()
+        print("✅ AWS 凭证有效")
+        print("账户 ID:", identity['Account'])
+        print("用户 ARN:", identity['Arn'])
+        return True
+    except NoCredentialsError:
+        print("❌ 未找到 AWS 凭证（NoCredentialsError）")
+    except PartialCredentialsError:
+        print("❌ 凭证不完整（PartialCredentialsError）")
+    except ClientError as e:
+        print("❌ AWS 客户端错误:", e.response['Error']['Message'])
+    except Exception as e:
+        print("❌ 未知错误:", str(e))
 
-    # 配置音频和识别参数
-    audio = speech.RecognitionAudio(content=content)
-    config = speech.RecognitionConfig(
-        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-        sample_rate_hertz=16000,  # 根据音频文件调整
-        language_code="zh-CN",  # 中文普通话
-    )
+    return False
 
-    # 调用 API 进行识别
-    response = client.recognize(config=config, audio=audio)
 
-    # 输出识别结果
-    for result in response.results:
-        print("Transcript: {}".format(result.alternatives[0].transcript))
+
+LANGUAGE_CODE = "en-US"
+SAMPLE_RATE = 16000
+
+
+
+
+class MyEventHandler(TranscriptResultStreamHandler):
+    def __init__(self, stream, recv_queue):
+        super().__init__(stream)
+        self.last_sent_text = ""
+        self.recv_queue = recv_queue
+
+    async def handle_transcript_event(self, transcript_event: TranscriptEvent):
+        for result in transcript_event.transcript.results:
+            if result.is_partial:
+                continue
+            if result.alternatives:
+                text = result.alternatives[0].transcript.strip()
+                if text and text != self.last_sent_text:
+                    self.last_sent_text = text
+                    await self.recv_queue.put(text)
+
+
+
+class AwsAsrClient:
+    def __init__(self, send_queue, recv_queue, **kwargs):
+        self.send_queue = send_queue
+        self.recv_queue = recv_queue
+
+    async def write_audio(self, stream):
+        while True:
+            chunk = await self.send_queue.get()
+            if chunk is not None:
+                await stream.input_stream.send_audio_event(audio_chunk=chunk)
+            else:
+                await stream.input_stream.end_stream()
+                break
+
+    async def doing(self):
+        chunk = await self.send_queue.get()
+        if chunk is None:
+            return
+
+        client = TranscribeStreamingClient(region=REGION)
+        stream = await client.start_stream_transcription(
+            language_code=LANGUAGE_CODE,
+            media_sample_rate_hz=SAMPLE_RATE,
+            media_encoding="pcm"
+        )
+        await stream.input_stream.send_audio_event(audio_chunk=chunk)
+
+        await asyncio.gather(
+            self.write_audio(stream),
+            MyEventHandler(stream.output_stream, self.recv_queue).handle_events()
+        )
+        await self.recv_queue.put(None)
 
 if __name__ == "__main__":
-    # 设置环境变量（如果未在外部设置）
-
-    # 调用函数，传入音频文件路径
-    transcribe_audio("path/to/your/audio.wav")
+    check_aws_credentials()

@@ -9,3 +9,4 @@ config.json
 db.json
 gkey.json
 *.wav
+aws.json
