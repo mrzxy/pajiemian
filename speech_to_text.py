@@ -2,7 +2,6 @@ import asyncio
 
 from amazon_transcribe.handlers import TranscriptResultStreamHandler
 from amazon_transcribe.model import TranscriptEvent
-from google.cloud import speech_v1p1beta1 as speech
 import os
 from amazon_transcribe.client import TranscribeStreamingClient
 import boto3
