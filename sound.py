@@ -1,5 +1,6 @@
 import asyncio
 
+import sys
 import sounddevice as sd
 import numpy as np
 import time
@@ -7,6 +8,7 @@ import os
 
 from automic import global_counter
 from asr import AsrWsClient
+from chat import send_chat_request
 from speech_to_text import AwsAsrClient
 from dc import discord
 
@@ -15,7 +17,6 @@ SAMPLE_RATE = 16000  # 采样率
 BLOCK_DURATION = 1  # 每次处理 1 秒音频
 VOLUME_THRESHOLD = 0.1  # 音量阈值（调整以适应不同声音）
 SILENCE_LIMIT = 3  # 5 秒无声音则停止录制
-DEVICE_INDEX = 2
 DEVICE_INDEX = 13
 CHANNEL_INDEX = 1
 
@@ -42,6 +43,10 @@ async def process_audio(recv_queue):
             if result is None:
                 break
             discord.call_webhook_api(result)
+            trans = send_chat_request(result)
+            if trans is not None:
+                discord.call_webhook_api(trans)
+
             # if 'result' not in result['payload_msg']:
             #     await asyncio.sleep(0.1)
             #     continue
@@ -115,4 +120,6 @@ async def monitor_audio():
         asyncio.create_task(finish_tasks(task1, task2))
 
 if __name__ == "__main__":
+    if len(sys.argv) >= 2 and sys.argv[1] == "dev":
+        DEVICE_INDEX = 1
     asyncio.run(monitor_audio())
