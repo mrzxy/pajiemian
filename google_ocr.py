@@ -1,4 +1,5 @@
 import json
+import math
 from functools import cmp_to_key
 import logging
 
@@ -99,12 +100,15 @@ def match_text(response):
                                 is_break_first = False
                                 tmp = symbol.bounding_box.vertices[0]
                                 tmp2 = paragraph.words[0].symbols[0].bounding_box.vertices[0]
+                                par_bbox = paragraph.bounding_box.vertices
                                 # 说明可能截取错误，需要重新修正
                                 if abs(tmp.x - tmp2.x) < 3 or (abs(tmp.x- tmp2.x) < 20 and tmp.x > 200):
                                     special_block.append({
                                         'text': symbol.text,
                                         'x': tmp.x,
                                         'y': tmp.y,
+                                        'h': par_bbox[2].y - par_bbox[0].y,
+                                        'bottom_y': par_bbox[2].y,
                                     })
                                     is_app = True
                                     continue
@@ -135,13 +139,19 @@ def match_text(response):
                     logger.debug(f"忽略了{word_text}")
                     continue
                 bbox = paragraph.words[0].bounding_box.vertices
-                block_words.append({"text": word_text, 'x': bbox[0].x, 'y': bbox[0].y, 'rx': paragraph.bounding_box.vertices[1].x})
+                par_bbox = paragraph.bounding_box.vertices
+                block_words.append({"text": word_text, 'x': bbox[0].x, 'y': bbox[0].y,
+                                    'h': par_bbox[2].y - par_bbox[0].y,
+                                    'bottom_y': par_bbox[2].y,
+                                    'rx': paragraph.bounding_box.vertices[1].x})
                 block_words.extend(special_block)
 
         block_words.sort(key=lambda e: e.get('y'))
 
     block_words = sorted(block_words, key=cmp_to_key(compare_dicts))
-
+    for k in block_words:
+        a = 1
+        # print(f"y:{k['y']},x:{k['x']},h:{k['h']} {k['text']}")
     # 抹平y
     prev = None
     processed_block_words = []
@@ -151,8 +161,19 @@ def match_text(response):
             prev = item
             continue
 
-        if abs(item.get('y') - prev.get('y')) >= 40:
-            processed_block_words.append([item])
+
+        if abs(item.get('y') - prev.get('y')) >= 35:
+            # 可能出现两行一个block的情况，导致一段内容被切割
+            if prev.get('h') > 30 and prev.get('x') <= 70:
+                # if abs(item.get('y') - prev.get('bottom_y')) >= 35:
+                if pattern2.findall(item.get('text')):
+                    processed_block_words.append([item])
+                else:
+                    item['text'] = " " + item['text']
+                    processed_block_words[-1].append(item)
+            else:
+                processed_block_words.append([item])
+
         else:
             last = processed_block_words[-1][-1]
 
@@ -187,6 +208,9 @@ def match_text(response):
             if line_item[1]['text'].strip() == "0":
                 del line_item[1]
 
+        # for k in line_item:
+        #     a = 1
+        #     print(f"y:{k['y']},x:{k['x']},h:{k['h']} {k['text']}")
         temp_group.append("".join([w['text'] for w in line_item]))
 
     pattern = re.compile(
@@ -241,16 +265,19 @@ def batch_test():
                 for x in result:
                     print(f"行:{x}")
 
+def one_test():
+    code = "bug02"
+    image_path = f"screenshots/{code}.png"
+    # extracted_text = extract_text_from_image(image_path,  code)
+    # print("提取的文本:", extracted_text)
+    logger.setLevel(logging.DEBUG)
+    with open(f"case/{code}.json", 'r', encoding='utf-8') as json_file:
+        data = json.load(json_file)
+        response = types.AnnotateImageResponse.from_json(json.dumps(data))
+        result = match_text(response)
+        for x in result:
+            print(f"行:{x}")
 if __name__ == "__main__":
     batch_test()
-    # code = "bug15"
-    # image_path = f"screenshots/{code}.png"
-    # # extracted_text = extract_text_from_image(image_path,  code)
-    # # print("提取的文本:", extracted_text)
-    # logger.setLevel(logging.DEBUG)
-    # with open(f"case/{code}.json", 'r', encoding='utf-8') as json_file:
-    #     data = json.load(json_file)
-    #     response = types.AnnotateImageResponse.from_json(json.dumps(data))
-    #     result = match_text(response)
-    #     for x in result:
-    #         print(f"行:{x}")
+    # one_test()
+
