@@ -1,7 +1,10 @@
 import requests
 
+from config import conf
+
+
 def send_chat_request(content):
-    api_key = ''  # 替换为你的 API 密钥
+    api_key = conf['CHAT_API_KEY']
     api_url = 'https://ark.cn-beijing.volces.com/api/v3/bots/chat/completions'  # 替换为实际的 API 地址
 
     # 请求参数
@@ -34,3 +37,4 @@ def send_chat_request(content):
 if __name__ == "__main__":
     content = "Please analyze the recent stock price fluctuations of Apple Inc."
     result = send_chat_request(content)
+    print(result)
