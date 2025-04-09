@@ -13,7 +13,7 @@ def send_chat_request(content):
         "messages": [
             {
                 "role": "user",
-                "content": """翻译以下内容:{}.要求: 直接返回翻译结果，不要返回不相关信息。""".format(content),
+                "content": """翻译以下内容:{}.要求: 直接返回翻译结果，不要返回不相关信息和注。""".format(content),
             }
         ]
     }

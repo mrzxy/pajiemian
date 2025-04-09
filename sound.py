@@ -1,5 +1,7 @@
 import asyncio
 
+from helper import find_device_by_name
+from logger import logger
 import sys
 import sounddevice as sd
 import numpy as np
@@ -36,16 +38,18 @@ def get_new_filename():
 
 async def process_audio(recv_queue):
     global_counter.increment()
-    print("process_audio begin", global_counter.get())
+    logger.info("process_audio begin {}".format(global_counter.get()))
     try:
         while True:
             result = await recv_queue.get()
             if result is None:
                 break
-            discord.call_webhook_api(result)
+            # discord.call_webhook_api(result)
+            logger.info(result)
             trans = send_chat_request(result)
             if trans is not None:
-                discord.call_webhook_api(trans)
+                logger.info(trans)
+                # discord.call_webhook_api(trans)
 
             # if 'result' not in result['payload_msg']:
             #     await asyncio.sleep(0.1)
@@ -61,9 +65,9 @@ async def process_audio(recv_queue):
                         # 保存录音文件
 
     except Exception as e:
-        print(f"Unexpected error 222: {e}")
+        logger.error(f"Unexpected error 222: {e}")
     global_counter.decrement()
-    print("process_audio done", global_counter.get())
+    logger.info(f"process_audio done {global_counter.get()}")
 
 
 async def finish_tasks(task1, task2):
@@ -71,12 +75,12 @@ async def finish_tasks(task1, task2):
     try:
         await asyncio.gather(task1, task2)
     except asyncio.CancelledError:
-        print("任务被取消")
-    print("任务完成", global_counter.get())
+        logger.info("任务被取消")
+    logger.info(f"任务完成 {global_counter.get()}")
 
 async def monitor_audio():
     while True:
-        print("当前协程数",global_counter.get())
+        logger.info(f"当前协程数 {global_counter.get()}")
         silence_counter = 0
         recording = False
         recording = False
@@ -95,14 +99,14 @@ async def monitor_audio():
             if volume > VOLUME_THRESHOLD:
                 last_sound_time = current_time
                 if not recording:
-                    print("开始录音...")
+                    logger.info("开始录音...")
                     recording = True
                 # recording_data.append(data_byte)
                 pcm_data = (indata.copy() * 32768).astype(np.int16).tobytes()
                 asyncio.run_coroutine_threadsafe(audio_queue.put(pcm_data), loop)
 
             elif recording and (current_time - last_sound_time > 3):
-                print("\n5 秒无声音，停止录音")
+                logger.info("\n5 秒无声音，停止录音")
                 silence_counter = 4
                 raise sd.CallbackStop()
 
@@ -112,14 +116,20 @@ async def monitor_audio():
         task2 = asyncio.create_task(process_audio(recv_queue))
 
         with sd.InputStream(callback=callback, blocksize=2048, samplerate=SAMPLE_RATE, channels=CHANNEL_INDEX, device=DEVICE_INDEX):
-            print("开始监听监听中...")
+            logger.info("开始监听监听中...")
             while silence_counter < 3:
                 await asyncio.sleep(BLOCK_DURATION)
         await audio_queue.put(None)
-        print("录音结束")
+        logger.info("录音结束")
         asyncio.create_task(finish_tasks(task1, task2))
 
 if __name__ == "__main__":
     if len(sys.argv) >= 2 and sys.argv[1] == "dev":
-        DEVICE_INDEX = 1
+        logger.info('测试开启')
+        r = find_device_by_name("BlackHole 2ch")
+        if r is None:
+            logger.error(f"没有到找到对应的设备")
+            exit(1)
+
+        DEVICE_INDEX = r["index"]
     asyncio.run(monitor_audio())

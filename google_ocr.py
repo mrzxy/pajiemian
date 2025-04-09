@@ -162,7 +162,7 @@ def match_text(response):
             continue
 
 
-        if abs(item.get('y') - prev.get('y')) >= 35:
+        if abs(item.get('y') - prev.get('y')) >= 40:
             # 可能出现两行一个block的情况，导致一段内容被切割
             if prev.get('h') > 30 and prev.get('x') <= 70:
                 # if abs(item.get('y') - prev.get('bottom_y')) >= 35:
@@ -192,7 +192,8 @@ def match_text(response):
                         item['text'] = " " + item['text']
                         processed_block_words[-1].append(item)
                 else:
-                    if pattern2.findall(item.get('text')) and pattern2.findall(last.get('text')):
+                    last_first = processed_block_words[-1][0]
+                    if pattern2.findall(item.get('text')) and (pattern2.findall(last.get('text')) or pattern2.findall(last_first.get('text'))):
                         processed_block_words.append([item])
                     else:
                         insert_pos = len(processed_block_words[-1]) - 1
@@ -208,9 +209,7 @@ def match_text(response):
             if line_item[1]['text'].strip() == "0":
                 del line_item[1]
 
-        # for k in line_item:
-        #     a = 1
-        #     print(f"y:{k['y']},x:{k['x']},h:{k['h']} {k['text']}")
+
         temp_group.append("".join([w['text'] for w in line_item]))
 
     pattern = re.compile(
@@ -242,6 +241,7 @@ def strip_text(text):
     chars = ["⚫", "•", "◉", "●", "✪ |", "✪|", "✪"]
     for char in chars:
         text = text.replace(char, "").replace(f"{char} ", "")
+    text = text.replace("999", "qqq")
     return text
 
 
@@ -266,7 +266,7 @@ def batch_test():
                     print(f"行:{x}")
 
 def one_test():
-    code = "bug02"
+    code = "bug17"
     image_path = f"screenshots/{code}.png"
     # extracted_text = extract_text_from_image(image_path,  code)
     # print("提取的文本:", extracted_text)

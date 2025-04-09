@@ -2,6 +2,7 @@ import base64
 import shutil
 import time
 from datetime import datetime, timedelta
+import sounddevice as sd
 
 import mss
 from PIL import Image
@@ -145,6 +146,13 @@ def corp_image(image_path, region, save_path="screenshots"):
         logger.info(f"Saved: {filename}")
         return filename
 
+
+def find_device_by_name(name, partial_match=True):
+    """按名称查找设备"""
+    for i, device in enumerate(sd.query_devices()):
+        if (partial_match and name in device['name']) or \
+                (not partial_match and name == device['name']):
+            return {'index': i, 'device': device}
+    return None
 if __name__ == "__main__":
-    capture_and_crop(None)
     capture_and_crop(None)
