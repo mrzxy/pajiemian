@@ -78,23 +78,27 @@ class AwsAsrClient:
                 break
 
     async def doing(self):
-        chunk = await self.send_queue.get()
-        if chunk is None:
-            return
+        try:
+            chunk = await self.send_queue.get()
+            if chunk is None:
+                return
 
-        client = TranscribeStreamingClient(region=REGION)
-        stream = await client.start_stream_transcription(
-            language_code=LANGUAGE_CODE,
-            media_sample_rate_hz=SAMPLE_RATE,
-            media_encoding="pcm"
-        )
-        await stream.input_stream.send_audio_event(audio_chunk=chunk)
+            client = TranscribeStreamingClient(region=REGION)
+            stream = await client.start_stream_transcription(
+                language_code=LANGUAGE_CODE,
+                media_sample_rate_hz=SAMPLE_RATE,
+                media_encoding="pcm"
+            )
+            await stream.input_stream.send_audio_event(audio_chunk=chunk)
 
-        await asyncio.gather(
-            self.write_audio(stream),
-            MyEventHandler(stream.output_stream, self.recv_queue).handle_events()
-        )
-        await self.recv_queue.put(None)
+            await asyncio.gather(
+                self.write_audio(stream),
+                MyEventHandler(stream.output_stream, self.recv_queue).handle_events()
+            )
+        except Exception as e:
+            print(e)
+        finally:
+            await self.recv_queue.put(None)
 
 if __name__ == "__main__":
     check_aws_credentials()
