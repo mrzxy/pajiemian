@@ -238,9 +238,9 @@ def match_text(response):
 
 
 def strip_text(text):
-    chars = ["⚫", "•", "◉", "●", "✪ |", "✪|", "✪"]
+    chars = ["⚫", "•", "◉", "●", "✪ |", "✪|", "✪","☐"]
     for char in chars:
-        text = text.replace(char, "").replace(f"{char} ", "")
+        text = text.replace(f"{char} ", "").replace(char, "")
     text = text.replace("999", "qqq")
     return text
 
