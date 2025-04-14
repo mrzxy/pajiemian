@@ -18,6 +18,9 @@ class Discord:
         pass
     def call_webhook_api(self, msg):
         webhook = "https://discord.com/api/webhooks/1356201454120992858/sebb92fhtfyRIrW7Jf1ShCECxkgWP71sR5ESLHwsycHyLn4owyy20XIO-vaGLHWin2ue"
+        return self.call_webhook_apiv2(webhook, msg)
+
+    def call_webhook_apiv2(self, webhook, msg):
         payload = {"content": msg}
         response = requests.post(webhook, json=payload)
 

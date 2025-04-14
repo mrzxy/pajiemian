@@ -44,12 +44,14 @@ async def process_audio(recv_queue):
             result = await recv_queue.get()
             if result is None:
                 break
-            discord.call_webhook_api(result)
+            webhook = 'https://discord.com/api/webhooks/1361161237110460416/WcY2BU5745rudNjgq-rrgGgqjJhQx2ceBlzPRJP8BSew7HhhsWXBH_YmyFB5_Tg_Ztjp'
+            discord.call_webhook_apiv2(webhook, result)
             logger.info(result)
             trans = send_chat_request(result)
             if trans is not None:
                 logger.info(trans)
-                discord.call_webhook_api(trans)
+                webhook = 'https://discord.com/api/webhooks/1361162001149202512/vl1lJIH6KnxRlJEhOq4AcNAB9EEsUet1Qig8vyHKhDNthM6OMUbMvj_UFfRmHVWWdB9j'
+                discord.call_webhook_apiv2(webhook, trans)
 
             # if 'result' not in result['payload_msg']:
             #     await asyncio.sleep(0.1)
