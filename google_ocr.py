@@ -198,7 +198,8 @@ def match_text(response):
                     else:
                         insert_pos = len(processed_block_words[-1]) - 1
                         item['text'] = " " + item['text']
-                        processed_block_words[-1].insert(insert_pos,item)
+                        processed_block_words[-1].append(item)
+                        # processed_block_words[-1].insert(insert_pos,item)
         prev = item
 
 
@@ -232,8 +233,6 @@ def match_text(response):
 
         result_list.append((role, event, content))
 
-    # for x in temp_group:
-    #     print("{} x:{} y:{}".format(x.get('text'), x.get('x'), x.get('y')))
     return result_list
 
 
@@ -266,7 +265,7 @@ def batch_test():
                     print(f"行:{x}")
 
 def one_test():
-    code = "bug17"
+    code = "bug2001"
     image_path = f"screenshots/{code}.png"
     # extracted_text = extract_text_from_image(image_path,  code)
     # print("提取的文本:", extracted_text)

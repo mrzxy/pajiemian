@@ -49,7 +49,7 @@ async def process_audio(recv_queue):
             logger.info(result)
             trans = send_chat_request(result)
             if trans is not None:
-                logger.info(trans)
+                logger.info( "翻译结果: " + trans)
                 webhook = 'https://discord.com/api/webhooks/1361162001149202512/vl1lJIH6KnxRlJEhOq4AcNAB9EEsUet1Qig8vyHKhDNthM6OMUbMvj_UFfRmHVWWdB9j'
                 discord.call_webhook_apiv2(webhook, trans)
 
